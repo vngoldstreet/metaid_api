@@ -11,12 +11,17 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const (
+	target_collection = "id_generates"
 )
 
 func DeleteMongoByID(id string) error {
 	client := repository.GetMongoClient()
 
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 	idObj, err := primitive.ObjectIDFromHex(id) // Replace with your actual document ID
 	if err != nil {
 		return err
@@ -37,7 +42,7 @@ func DeleteMongoByID(id string) error {
 
 func UpdateMongoByID(id string, vps_name string) error {
 	client := repository.GetMongoClient()
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 
 	idObj, err := primitive.ObjectIDFromHex(id) // Replace with your actual document ID
 	if err != nil {
@@ -64,7 +69,7 @@ func UpdateMongoByID(id string, vps_name string) error {
 
 func SetMongoDB(mql_id string, vps_name string) error {
 	client := repository.GetMongoClient()
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 	document := entity.IDGenerate{
 		UpdateAt: time.Now(),
 		MQLID:    mql_id,
@@ -80,11 +85,14 @@ func SetMongoDB(mql_id string, vps_name string) error {
 
 func GetMongoDB(vps_name string) (entity.IDGenerate, error) {
 	client := repository.GetMongoClient()
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 	filter := bson.M{"vps_name": vps_name} // Replace with your actual filter condition
 
+	findOptions := options.FindOne()
+	findOptions.SetSort(bson.D{{Key: "_id", Value: -1}})
+
 	var result entity.IDGenerate
-	err := collection.FindOne(context.Background(), filter).Decode(&result)
+	err := collection.FindOne(context.Background(), filter, findOptions).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return entity.IDGenerate{}, errors.New("no document found")
@@ -97,7 +105,7 @@ func GetMongoDB(vps_name string) (entity.IDGenerate, error) {
 
 func GetAllMongoData(vps_name string) (entity.IDGenerate, error) {
 	client := repository.GetMongoClient()
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 	var results []entity.IDGenerate
 	filter := bson.M{"vps_name": vps_name} // Replace with your actual filter condition
 
@@ -127,7 +135,7 @@ func GetAllMongoData(vps_name string) (entity.IDGenerate, error) {
 
 func DeleteAllDataByName(vps_name string) error {
 	client := repository.GetMongoClient()
-	collection := client.Database("FXGHDatabases").Collection("id_generates")
+	collection := client.Database("FXGHDatabases").Collection(target_collection)
 	filter := bson.M{"vps_name": vps_name} // Replace with your actual filter condition
 
 	cursor, err := collection.Find(context.Background(), filter)
