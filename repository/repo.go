@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -14,6 +16,23 @@ import (
 
 var rdb *redis.Client
 var mongoCLient *mongo.Client
+
+func SetupLogger() {
+	log := logrus.New()
+	log.SetFormatter(&logrus.JSONFormatter{}) // Định dạng log JSON (tùy chọn)
+
+	// Mở tệp log để lưu
+	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		log.SetOutput(file)
+	} else {
+		log.Info("Failed to log to file, using default stderr")
+	}
+
+	// Cấu hình logger cho Gin
+	gin.SetMode(gin.ReleaseMode) // Đặt chế độ Gin (ReleaseMode hoặc DebugMode)
+	gin.DefaultWriter = log.Writer()
+}
 
 func ConnectToRedis() {
 	rdb = redis.NewClient(&redis.Options{
@@ -55,21 +74,38 @@ func ConnectToMongoDB() {
 }
 
 // Ta muốn sinh ra 1 mảng bao gồm tất cả các ký tự có thể kết hợp
-func Logger(c *gin.Context) {
-	log := logrus.New()
+func Logger() gin.HandlerFunc {
+	logger := logrus.New()
+	return func(c *gin.Context) {
+		// Bắt đầu thời gian
+		startTime := time.Now()
 
-	// Logging thông tin về yêu cầu
-	log.WithFields(logrus.Fields{
-		"clientIP": c.ClientIP(),
-		"method":   c.Request.Method,
-		"path":     c.FullPath(),
-	}).Info("Request")
+		// Xử lý request
+		c.Next()
 
-	// Thực hiện xử lý
+		// Kết thúc thời gian
+		endTime := time.Now()
+		latencyTime := endTime.Sub(startTime)
 
-	// Logging thông tin về phản hồi
-	log.WithFields(logrus.Fields{
-		"clientIP": c.ClientIP(),
-		"status":   c.Writer.Status(),
-	}).Info("Response")
+		// Trạng thái
+		statusCode := c.Writer.Status()
+
+		// Phương thức
+		reqMethod := c.Request.Method
+
+		// Đường dẫn
+		reqUri := c.Request.RequestURI
+
+		// Địa chỉ IP
+		clientIP := c.ClientIP()
+
+		// Log chi tiết
+		logger.WithFields(logrus.Fields{
+			"status_code":  statusCode,
+			"latency_time": latencyTime,
+			"client_ip":    clientIP,
+			"method":       reqMethod,
+			"uri":          reqUri,
+		}).Info()
+	}
 }

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	target_collection = "id_generates"
+	target_collection = "id_auto_generates"
 )
 
 func DeleteMongoByID(id string) error {

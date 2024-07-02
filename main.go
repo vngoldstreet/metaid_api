@@ -11,17 +11,26 @@ import (
 
 func init() {
 	repository.ConnectToMongoDB()
+	repository.SetupLogger()
 }
 
 func main() {
 	r := gin.Default()
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"POST", "OPTIONS", "GET", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, ResponseType, accept, origin, Cache-Control, X-Requested-With"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(
+		cors.New(cors.Config{
+			AllowOrigins:     []string{"*"},
+			AllowMethods:     []string{"POST", "GET", "PUT"},
+			AllowHeaders:     []string{"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, ResponseType, accept, origin, Cache-Control, X-Requested-With"},
+			AllowCredentials: true,
+			MaxAge:           12 * time.Hour,
+		}),
+		repository.Logger(),
+	)
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
 	api := r.Group("/api/v1")
 	{
 		api.GET("/get-new-mtid", controllers.HandleGetNewMetaID)
